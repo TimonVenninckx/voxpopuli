@@ -12,8 +12,8 @@ Camera::Camera()
 	else
 	{
 		// setup a basic view frustum
-		camPos = float3( 0, 0, -2 );
-		camTarget = float3( 0, 0, -1 );
+		camPos = float3( 0, .2, -2 );
+		camTarget = float3( 0, .2,-1 );
 		topLeft = float3( -aspect, 1, 0 );
 		topRight = float3( aspect, 1, 0 );
 		bottomLeft = float3( -aspect, -1, 0 );
@@ -51,8 +51,14 @@ bool Camera::HandleInput( const float t )
 	float3 right = normalize( cross( tmpUp, ahead ) );
 	float3 up = normalize( cross( ahead, right ) );
 	bool changed = false;
-	if (IsKeyDown( GLFW_KEY_UP )) camTarget -= speed * up, changed = true;
-	if (IsKeyDown( GLFW_KEY_DOWN )) camTarget += speed * up, changed = true;
+    if (true) {
+        if (IsKeyDown(GLFW_KEY_UP)) camTarget += speed * up, changed = true;
+        if (IsKeyDown(GLFW_KEY_DOWN)) camTarget -= speed * up, changed = true;
+    }
+    else {
+        if (IsKeyDown(GLFW_KEY_UP)) camTarget -= speed * up, changed = true;
+        if (IsKeyDown(GLFW_KEY_DOWN)) camTarget += speed * up, changed = true;
+    }
 	if (IsKeyDown( GLFW_KEY_LEFT )) camTarget -= speed * right, changed = true;
 	if (IsKeyDown( GLFW_KEY_RIGHT )) camTarget += speed * right, changed = true;
 	ahead = normalize( camTarget - camPos );

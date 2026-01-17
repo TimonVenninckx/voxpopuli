@@ -1,7 +1,7 @@
 #pragma once
 
 // high level settings
-#define WORLDSIZE 128 // power of 2. Warning: max 512 for a 512x512x512x4 bytes = 512MB world!
+#define WORLDSIZE 256 // power of 2. Warning: max 512 for a 512x512x512x4 bytes = 512MB world!
 
 // low-level / derived
 #define WORLDSIZE2	(WORLDSIZE*WORLDSIZE)

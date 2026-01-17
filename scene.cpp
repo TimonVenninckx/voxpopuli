@@ -27,19 +27,33 @@ Scene::Scene()
 	memset( grid, 0, GRIDSIZE3 * sizeof( uint ) );
 	// initialize the scene using Perlin noise, parallel over z
 #pragma omp parallel for schedule(dynamic)
-	for (int z = 0; z < 128; z++)
-	{
-		const float fz = (float)z / WORLDSIZE;
-		for (int y = 0; y < WORLDSIZE; y++)
-		{
-			float fx = 0, fy = (float)y / WORLDSIZE;
-			for (int x = 0; x < WORLDSIZE; x++, fx += 1.0f / WORLDSIZE)
-			{
-				const float n = noise3D( fx, fy, fz );
-				Set( x, y, z, n > 0.09f ? 0x020101 * y : 0 );
-			}
-		}
-	}
+    for (int z = 0; z < 128; z++)
+        for (int y = 0; y < 128; y++) for (int x = 0; x < 128; x++)
+            if (x < 2 || x > 125 || z > 125 || y < 2 || y > 125)
+                //Set(x, y, z, 0xeeeeee);
+                Set(x, y, z, y == 1 ? 0x19999bb : 0xffffff);
+            else if (y > 30 && y < 50 && z > 50 && z < 70 && x > 20)
+                if (x < 40) Set(x, y, z, 0x3ff7777);
+                else if (x > 55 && x < 75) Set(x, y, z, 0x2aaffaa);
+                else if (x > 90 && x < 110) Set(x, y, z, 0x7777ff);
+
+    /*for (int z = 0; z < WORLDSIZE; z++) {
+        for (int x = 0; x < WORLDSIZE; x++) {
+            Set(x, 0, z, 0);
+            Set(x, WORLDSIZE - 1, z, 0);
+        }
+    }
+    for (int y = 0; y < WORLDSIZE; y++) {
+        for (int z = 0; z < WORLDSIZE; z++) {
+            Set(0, y, z, 0);
+            Set(WORLDSIZE - 1,y, z, 0);
+        }
+
+        for (int x = 0; x < WORLDSIZE; x++) {
+            Set(x,y,0,0);
+            Set(x,y,WORLDSIZE - 1, 0);
+        }
+    }*/
 }
 
 void Scene::Set( const uint x, const uint y, const uint z, const uint v )
@@ -137,7 +151,7 @@ bool Scene::IsOccluded( Ray& ray ) const
 	while (s.t < ray.t)
 	{
 		const uint cell = grid[s.X + s.Y * GRIDSIZE + s.Z * GRIDSIZE2];
-		if (cell) /* we hit a solid voxel */ return s.t < ray.t;
+		if (cell && cell >> 24 != 2) /* we hit a solid voxel */ return s.t < ray.t;
 		if (s.tmax.x < s.tmax.y)
 		{
 			if (s.tmax.x < s.tmax.z) { if ((s.X += s.step.x) >= GRIDSIZE) return false; s.t = s.tmax.x, s.tmax.x += s.tdelta.x; }

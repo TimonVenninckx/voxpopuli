@@ -8,7 +8,10 @@ class Renderer : public TheApp
 public:
 	// game flow methods
 	void Init();
-	float3 Trace( Ray& ray, int = 0, int = 0, int = 0 );
+	float3 Trace( Ray& ray, int depth = 0, int = 0, int = 0 );
+
+    float3 CalculateDiffuse(float3 normal, float3 intersection, float3 albedo);
+
 	void Tick( float deltaTime );
 	void UI();
 	void Shutdown() { /* nothing here for now */ }
