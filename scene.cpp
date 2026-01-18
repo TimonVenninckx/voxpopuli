@@ -1,5 +1,8 @@
 #include "template.h"
 
+//#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
 inline float intersect_cube( Ray& ray )
 {
 	// branchless slab method by Tavian
@@ -22,20 +25,49 @@ inline bool point_in_cube( const float3& pos )
 
 Scene::Scene()
 {
+    grid = (uint*)MALLOC64(GRIDSIZE3 * sizeof(uint));
+    //memset(grid, 0, GRIDSIZE3 * sizeof(uint));
+    gzFile f = gzopen("assets/viking.bin", "rb");
+    int3 size;
+    gzread(f, &size, sizeof(int3));
+    gzread(f, grid, size.x * size.y * size.z * 4);
+    gzclose(f);
+
+    skyPixels = stbi_loadf("assets/kloofendal_48d_partly_cloudy_puresky_4k.hdr", &skyWidth, &skyHeight, &skyBpp,0 );
+    for (int i{ 0 }; i < skyWidth * skyHeight * 3; i++)
+        skyPixels[i] = sqrtf(skyPixels[i]);
+
+    return;
+
+
+
 	// allocate room for the world
-	grid = (uint*)MALLOC64( GRIDSIZE3 * sizeof( uint ) );
-	memset( grid, 0, GRIDSIZE3 * sizeof( uint ) );
 	// initialize the scene using Perlin noise, parallel over z
-#pragma omp parallel for schedule(dynamic)
-    for (int z = 0; z < 128; z++)
-        for (int y = 0; y < 128; y++) for (int x = 0; x < 128; x++)
-            if (x < 2 || x > 125 || z > 125 || y < 2 || y > 125)
-                //Set(x, y, z, 0xeeeeee);
-                Set(x, y, z, y == 1 ? 0x19999bb : 0xffffff);
-            else if (y > 30 && y < 50 && z > 50 && z < 70 && x > 20)
-                if (x < 40) Set(x, y, z, 0x3ff7777);
-                else if (x > 55 && x < 75) Set(x, y, z, 0x2aaffaa);
-                else if (x > 90 && x < 110) Set(x, y, z, 0x7777ff);
+    #pragma omp parallel for schedule(dynamic)
+    for (int z = 0; z < WORLDSIZE; z++)
+    {
+        const float fz = (float)z / WORLDSIZE;
+        for (int y = 0; y < WORLDSIZE; y++)
+        {
+            float fx = 0, fy = (float)y / WORLDSIZE;
+            for (int x = 0; x < WORLDSIZE; x++, fx += 1.0f / WORLDSIZE)
+            {
+                const float n = noise3D(fx, fy, fz);
+                Set(x, y, z, n > 0.09f ? 0x020101 * y : 0);
+            }
+        }
+    }
+    //for (int z = 0; z < 128; z++)
+    //    for (int y = 0; y < 128; y++) for (int x = 0; x < 128; x++)
+    //        if (x < 2 || x > 125 || z > 125 || y < 2 || y > 125)
+    //            //Set(x, y, z, 0xeeeeee);
+    //            Set(x, y, z, y == 1 ? 0x19999bb : 0xffffff);
+    //        else if (y > 30 && y < 50 && z > 50 && z < 70 && x > 20)
+    //            if (x < 40) Set(x, y, z, 0x3ff7777);
+    //            else if (x > 55 && x < 75) Set(x, y, z, 0x2aaffaa);
+    //            else if (x > 90 && x < 110) Set(x, y, z, 0x7777ff);
+
+
 
     /*for (int z = 0; z < WORLDSIZE; z++) {
         for (int x = 0; x < WORLDSIZE; x++) {

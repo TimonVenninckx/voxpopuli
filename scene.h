@@ -1,7 +1,7 @@
 #pragma once
 
 // high level settings
-#define WORLDSIZE 256 // power of 2. Warning: max 512 for a 512x512x512x4 bytes = 512MB world!
+#define WORLDSIZE 128 // power of 2. Warning: max 512 for a 512x512x512x4 bytes = 512MB world!
 
 // low-level / derived
 #define WORLDSIZE2	(WORLDSIZE*WORLDSIZE)
@@ -30,6 +30,11 @@ public:
 	bool IsOccluded( Ray& ray ) const;
 	void Set( const uint x, const uint y, const uint z, const uint v );
 	unsigned int* grid; // voxel payload is 'unsigned int', interpretation of the bits is free!
+
+    float* skyPixels;
+    int skyWidth;
+    int skyHeight;
+    int skyBpp;
 private:
 	bool Setup3DDDA( Ray& ray, DDAState& state ) const;
 };
