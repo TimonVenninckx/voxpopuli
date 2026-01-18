@@ -49,6 +49,7 @@ Scene::Scene()
     for (int i{ 0 }; i < skyWidth * skyHeight * 3; i++)
         skyPixels[i] = sqrtf(skyPixels[i]);
 
+    // early return
     return;
 
 

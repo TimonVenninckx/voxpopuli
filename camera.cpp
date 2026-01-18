@@ -42,6 +42,34 @@ Ray Camera::GetPrimaryRay( const float x, const float y )
 	// - there are far cooler camera models, e.g. try 'Panini projection'.
 }
 
+Frustum Tmpl8::Camera::BuildFrustum()
+{
+    Frustum f;
+    f.plane[0] = cross(topLeft - bottomLeft, topLeft - camPos);
+    f.plane[1] = cross(topRight - camPos, topLeft - bottomLeft);
+    f.plane[2] = cross(topRight - topLeft, topLeft - camPos);
+    f.plane[3] = cross(bottomLeft - camPos, topRight - topLeft);
+    for (int i{ 0 }; i < 4; i++) {
+        f.plane[i].w = distance(f.plane[i], camPos);
+    }
+    return f;
+}
+
+//bool Camera::HandleInput(const float t)
+//{
+//    static float r = 0, a;
+//    r += t * 0.001f, a = 0.7f * sinf(r) + 1.6f;
+//    camPos = 0.7f * float3(cosf(a) + 0.7, 0.7f, sinf(a) + 0.7f);
+//    mat4 M = mat4::LookAt(camPos, float3(5, 3, 5) / 10);
+//    float3 x(M[0], M[4], M[8]), y(M[1], M[5], M[9]), z(M[2], M[6], M[10]);
+//    topLeft = camPos + 2 * z - aspect * x + y;
+//    topRight = camPos + 2 * z + aspect * x + y;
+//    bottomLeft = camPos + 2 * z - aspect * x - y;
+//    return false;
+//}
+
+
+
 bool Camera::HandleInput( const float t )
 {
 	if (!WindowHasFocus()) return false;

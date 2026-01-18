@@ -14,7 +14,7 @@ public:
 
 	void Tick( float deltaTime );
 	void UI();
-	void Shutdown() { /* nothing here for now */ }
+    void Shutdown();
 	// input handling
 	void MouseUp( int button ) { button = 0; /* implement if you want to detect mouse button presses */ }
 	void MouseDown( int button ) { button = 0; /* implement if you want to detect mouse button presses */ }

@@ -6,6 +6,12 @@
 // #define FULLSCREEN
 #define DOUBLESIZE
 
+typedef float4 Plane;
+struct Frustum { Plane plane[4]; };
+inline float distance(Plane& plane, float3& pos) {
+    return dot(float3(plane), pos) - plane.w;
+}
+
 namespace Tmpl8 {
 
 class Camera
@@ -18,6 +24,8 @@ public:
 	float aspect = (float)SCRWIDTH / (float)SCRHEIGHT;
 	float3 camPos, camTarget;
 	float3 topLeft, topRight, bottomLeft;
+
+    Frustum BuildFrustum();
 };
 
 }
