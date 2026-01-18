@@ -10,14 +10,21 @@ struct Light {
     float3 color;
 };
 
-
+constexpr float FSTR = 50.f;
 std::vector<Light> lights
 {
-    //Light { float3{  2,  2.5, 0.1}, float3{1.f, 0.f, 0.f} },
-    //Light { float3{ 1.0, 0.0,-1.0}, float3{ 0.6f, .6f, 0.f} },
-    Light { float3{ 0.0, 0.0, 0.0}, float3{ 1.f, 1.f,1.f} },
+    //Light { float3{ 3.0,  1.5, 0.1}, float3{ 0.f, FSTR, 0.f} },
+    //Light { float3{ 0.0,  1.5,-3.0}, float3{ 0.f,  0.f,FSTR} },
+    //Light { float3{ 0.0,  1.5, 3.0}, float3{ FSTR, 0.f, 0.f} },
+    Light { float3{ 0.0,  1.5,6.0}, float3{ FSTR, FSTR, FSTR} },
 };
 
+
+
+// imgui stuff
+bool rotatingLight = false;
+bool toneMapping = false;
+bool blueNoise = true;
 
 /*
 refract()
@@ -29,13 +36,23 @@ else
     R = eta * D - (eta * dot(N, D) + sqrtf(k)) * N;*/
 
 
-float3 RandomPointOnLight() {
-    return float3(RandomFloat() - 1, 3, RandomFloat() - 1);
+float3 RandomPointOnLight(float3 dirTowardsLight,float r0, float r1) {
+    // create plane from normal
+    // build orthonormal basis(u,v) perpendicular to normal
+    float3 normal = normalize(dirTowardsLight);
+    float3 u = normalize(abs(normal.x) > .1f ? cross(float3(0, 1, 0), normal) : cross(float3(1, 0, 0), normal));
+    float3 v = cross(normal, u);
+    
+    float r = sqrt(r0);
+    float theta = 2 * PI * r1;
+    return (u * cos(theta) + v * sin(theta)) * r;
+
+    return u * r0 + v * r1;
 }
 
 
 float glassRefractiveIndex{ 1.46f };
-float3 Renderer::Trace(Ray& ray, int depth, int, int)
+float3 Renderer::Trace(Ray& ray, int depth, int x, int y)
 {
     if (depth == 5)
         return 0;
@@ -63,10 +80,10 @@ float3 Renderer::Trace(Ray& ray, int depth, int, int)
         float3 refracted{};
         if (k > 0) {
             float3 R = eta * ray.D + (eta * d - sqrtf(k))* N;
-            refracted = Trace(Ray(I, R), depth + 1);
+            refracted = Trace(Ray(I, R), depth + 1,x,y);
         }
         float3 R = ray.D - 2 * N * dot(ray.D,N);
-        reflected = Trace(Ray( I,R ), depth + 1);
+        reflected = Trace(Ray( I,R ), depth + 1, x, y);
 
         float R0 = pow2f((n1 - n2) / (n1 + n2));
         float fresnel = k > 0 ? R0 + (1 - R0) * pow5f(1 - d) : 1;
@@ -83,77 +100,31 @@ float3 Renderer::Trace(Ray& ray, int depth, int, int)
     }
     float3 result{};
     for (auto& light : lights) {
-        float3 L = (light.pos +  RandomPointOnLight()) - I;
+        float r0 = RandomFloat();
+        float r1 = RandomFloat();
+        static Surface blue("assets/LDR_RG01_0.png");
+        if (blueNoise) {
+            int pixel = blue.pixels[(x & 63) + (y & 63) * 64];
+            int red = pixel >> 16, green = (pixel >> 8) & 255;
+            r0 = fracf(red / 256.0f + frame * 0.61803399f);
+            r1 = fracf(green / 256.0f + frame * 0.61803399f);
+        }
+        float3 lightOffset = RandomPointOnLight(light.pos - I,r0,r1);
+
+        float3 L = (light.pos + lightOffset) - I;
         float distance = length(L);
         L = normalize(L);
         float cosa = max(0.0f, dot(N, L));
         Ray shadowRay(I, L, distance);
         if (scene.IsOccluded(shadowRay)){
-            //result += float3(0.01f) * albedo; 
+            //result += float3(0.01f) * albedo; // ambient test 
             continue;
         }
 
-        result += 20 * albedo * light.color * cosa / pow2f(distance);
+        result += albedo * light.color * cosa / pow2f(distance);
     }
     return result;
 }
-
-//float3 Renderer::Trace( Ray& ray, int depth, int, int /* we'll use these later */ )
-//{
-//    if (depth == 10)
-//        return{ 0 };
-//
-//    const float3 skyColor{ .7f,.8f,1.f };
-//
-//	scene.FindNearest( ray );
-//	if (ray.voxel == 0) return skyColor; // or a fancy sky color
-//	float3 N = ray.GetNormal();
-//	float3 I = ray.IntersectionPoint();
-//	float3 albedo = ray.GetAlbedo();
-//
-//    if (ray.voxel >> 24 == 1) {
-//        // reflective
-//        float3 R = ray.D - 2 * N * dot(ray.D, N);
-//        Ray reflection{ I,R };
-//        return albedo * Trace(reflection, depth + 1);
-//    }
-//    else if (ray.voxel >> 24 == 2) {
-//        //glass 
-//        // refractive indexes
-//        float n1 = 1.f;  // air 
-//        float n2 = glassRefractiveIndex; // glass
-//        if (ray.inside)
-//            std::swap(n1, n2);
-//        float d = dot(N, -ray.D);
-//        float eta = n1 / n2;
-//        float k = 1 - eta * eta * (1 - pow2f(d));
-//
-//        float3 reflected{ 0 };
-//        float3 refracted{ 0 };
-//        if (k > 0) {
-//            float3 R = eta * ray.D + (eta * d - sqrtf(k)) * N;
-//            refracted = Trace(Ray(I, R), depth + 1);
-//        }
-//        else {
-//            float3 R = ray.D - 2 * N * d;
-//            reflected = Trace(Ray(I, R), depth + 1);
-//        }
-//        float R0 = pow2f((n1 - n2) / (n1 + n2));
-//        float fresnel = k > 0 ? R0 + (1 - R0) * pow5f(1 - d) : 1;
-//        return albedo * (fresnel * reflected + (1 - fresnel) * refracted);
-//    }
-//    else if (ray.voxel >> 24 == 3) {
-//        // reflective with shadow
-//        float3 R = ray.D - 2 * N * dot(ray.D, N);
-//        Ray reflection{ I,R };
-//
-//        return 0.9f * Trace(reflection, depth + 1) + 0.1f* CalculateDiffuse(N,I,albedo);
-//    }
-//    else {
-//        // difuse
-//        return CalculateDiffuse(N,I,albedo);
-//    }
-//}
                      // normal, intersection, albedo color
 float3 Renderer::CalculateDiffuse(float3 N, float3 I, float3 albedo){
     float3 result{};
@@ -186,7 +157,6 @@ void Renderer::Init()
 // -----------------------------------------------------------
 // Main application tick function - Executed every frame
 // -----------------------------------------------------------
-bool rotatingLight = false;
 static int spp = 1;
 void Renderer::Tick( float deltaTime )
 {
@@ -198,8 +168,7 @@ void Renderer::Tick( float deltaTime )
             0.f + 3.f * sin(0.6f * g.elapsed())
         );
     }
-    //std::cout << "camera position:\t" << camera.camPos.x << ' ' << camera.camPos.y << ' ' << camera.camPos.z << "\n";
-
+    frame++;
 	// high-resolution timer, see template.h
 	Timer t;
 	// pixel loop: lines are executed as OpenMP parallel tasks (disabled in DEBUG)
@@ -211,11 +180,17 @@ void Renderer::Tick( float deltaTime )
 		for (int x = 0; x < SCRWIDTH; x++)
 		{
 			Ray r = camera.GetPrimaryRay( (float)x + RandomFloat(), (float)y + RandomFloat());
-			accumulator [x + y * SCRWIDTH] += Trace( r );
+			
+            accumulator[x + y * SCRWIDTH] += Trace(r, 0, x, y);
             float3 average = accumulator[x + y * SCRWIDTH] * scale;
-            //float3 c = clamp(average, 0.f, 1.f);
-            //c = pow2f(c, 1.0f / 2.2f);
-			screen->pixels[x + y * SCRWIDTH] = RGBF32_to_RGB8(average);
+            if (toneMapping) {
+                average = average / (average + float3(1.f));
+                average.x = powf(average.x, 1.0f / 2.2f);
+                average.y = powf(average.y, 1.0f / 2.2f);
+                average.z = powf(average.z, 1.0f / 2.2f);
+            }
+            screen->pixels[x + y * SCRWIDTH] = RGBF32_to_RGB8(average);
+            //screen->pixels[x + y * SCRWIDTH] = RGBF32_to_RGB8(Trace(r, 0, x, y));
 		}
 	}
 	// performance report - running average - ms, MRays/s
@@ -243,4 +218,9 @@ void Renderer::UI()
 
     ImGui::SliderFloat("glass refraction index", &glassRefractiveIndex, 0.1f, 20.f);
     ImGui::Checkbox("rotating light", &rotatingLight);
+    ImGui::Checkbox("Tone mapping", &toneMapping);
+    if (ImGui::Checkbox("Blue Noise", &blueNoise)) {
+        spp = 1;
+        memset(accumulator, 0, SCRWIDTH * SCRHEIGHT * sizeof(float3));
+    }
 }

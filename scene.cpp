@@ -26,12 +26,24 @@ inline bool point_in_cube( const float3& pos )
 Scene::Scene()
 {
     grid = (uint*)MALLOC64(GRIDSIZE3 * sizeof(uint));
-    //memset(grid, 0, GRIDSIZE3 * sizeof(uint));
-    gzFile f = gzopen("assets/viking.bin", "rb");
-    int3 size;
-    gzread(f, &size, sizeof(int3));
-    gzread(f, grid, size.x * size.y * size.z * 4);
-    gzclose(f);
+    if (true) {
+        //memset(grid, 0, GRIDSIZE3 * sizeof(uint));
+        gzFile f = gzopen("assets/viking.bin", "rb");
+        int3 size;
+        gzread(f, &size, sizeof(int3));
+        gzread(f, grid, size.x * size.y * size.z * 4);
+        gzclose(f);
+    }
+    else {
+        memset(grid, 0, GRIDSIZE3 * sizeof(uint));
+        for (int i = 0; i < 128 * 128 * 128; i++)
+        {
+            const int x = i & 127, y = (i >> 7) & 127, z = i >> 14;
+            bool v = y < 10, p = z > 90 && z < 94;
+            p &= (x & 31) > 10 && (x & 31) < 18 && y < 80;
+            Set(x, y, z, p || v ? 0xffffff : 0);
+        }
+    }
 
     skyPixels = stbi_loadf("assets/kloofendal_48d_partly_cloudy_puresky_4k.hdr", &skyWidth, &skyHeight, &skyBpp,0 );
     for (int i{ 0 }; i < skyWidth * skyHeight * 3; i++)

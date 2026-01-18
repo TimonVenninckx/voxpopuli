@@ -35,6 +35,8 @@ public:
 	float3* history;		// for episode 5
 	Scene scene;
 	Camera camera;
+
+    int frame = 0;
 };
 
 } // namespace Tmpl8
